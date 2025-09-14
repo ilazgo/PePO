@@ -2,46 +2,52 @@ import datetime
 import os
 import subprocess
 import argparse
+import logging
 from datetime import datetime
 
+logging.basicConfig(
+    level=logging.WARNING,
+    format="%(levelname)s - %(message)s"
+)
 
 def check_datetimeoriginal(file_path, max_year, max_month, min_year, min_month):
-    command = ['exiftool', '-s', '-DateTimeOriginal', file_path]
-    result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        command = ['exiftool', '-s', '-DateTimeOriginal', file_path]
+        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    except FileNotFoundError:
+        raise RuntimeError(f"'exiftool' is not installed or is not found on PATH.")
 
     if result.returncode == 0:
         datetime_original = None
 
-        for line in result.stdout.splitlines():
-            if ':' in line:
-                key, value = line.split(':', 1)
-                key = key.strip()
-                value = value.strip()
+        try:
+            for line in result.stdout.splitlines():
+                if ':' in line:
+                    key, value = line.split(':', 1)
+                    key = key.strip()
+                    value = value.strip()
 
-                if key == 'DateTimeOriginal':
-                    datetime_original = value
+                    if key == 'DateTimeOriginal':
+                        datetime_original = value
+                        break
 
-        if datetime_original:
-            try:
+            if not datetime_original:
+                return None, f"ERROR: {file_path} has no DateTimeOriginal."
+            
+            if datetime_original:
                 # Date format: "YYYY:MM:DD HH:MM:SS"
                 year = int(datetime_original.split(':')[0])
                 month = int(datetime_original.split(':')[1])
 
                 if (year > max_year) or (year == max_year and month > max_month):
-                    print(f"{file_path} has a date after {max_year}/{max_month}: {datetime_original}")
+                    return None, f"{file_path} has a date after {max_year}/{max_month}: {datetime_original}"
                 elif (year < min_year) or (year == min_year and month < min_month):
-                    print(f"{file_path} has a date before {min_year}/{min_month}: {datetime_original}")
-                else:
-                    print(f"{file_path}:\n{result.stdout}")
+                    return None, f"{file_path} has a date before {min_year}/{min_month}: {datetime_original}"
 
-            except ValueError:
-                print(f"ERROR: Date format is not YYYY:MM:DD HH:MM:SS in {file_path} - {datetime_original}")
+                return result.stdout, None
 
-        else:
-            print(f"ERROR: {file_path} has no DateTimeOriginal.")
-
-    else:
-        print(f"ERROR: {file_path} - {result.stderr}")
+        except ValueError:
+            return None, f"Date format is not YYYY:MM:DD HH:MM:SS in {file_path} - {datetime_original}"
 
 
 def main():
@@ -57,9 +63,12 @@ def main():
 
     for root, dirs, files in os.walk(args.directory):
         for file in files:
-            if file.lower().endswith(('.jpg', '.jpeg', '.png', '.tiff', '.mp4')):
+            if file.lower().endswith(('.jpg', '.jpeg', '.png', '.tiff', '.mp4', '.mov')):
                 file_path = os.path.join(root, file)
-                check_datetimeoriginal(file_path, current_year, current_month, min_year, min_month)
+                output, error = check_datetimeoriginal(file_path, current_year, current_month, min_year, min_month)
+                if not output:
+                    logging.warning(error)
+
 
 
 if __name__ == "__main__":
