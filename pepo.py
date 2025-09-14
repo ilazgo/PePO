@@ -36,15 +36,14 @@ def check_datetimeoriginal(file_path, max_year, max_month, min_year, min_month):
             
             if datetime_original:
                 # Date format: "YYYY:MM:DD HH:MM:SS"
-                year = int(datetime_original.split(':')[0])
-                month = int(datetime_original.split(':')[1])
+                dt = datetime.strptime(datetime_original, "%Y:%m:%d %H:%M:%S")
 
-                if (year > max_year) or (year == max_year and month > max_month):
+                if (dt.year > max_year) or (dt.year == max_year and dt.month > max_month):
                     return None, f"{file_path} has a date after {max_year}/{max_month}: {datetime_original}"
-                elif (year < min_year) or (year == min_year and month < min_month):
+                elif (dt.year < min_year) or (dt.year == min_year and dt.month < min_month):
                     return None, f"{file_path} has a date before {min_year}/{min_month}: {datetime_original}"
 
-                return result.stdout, None
+                return dt.strftime("%Y%m%d_%H%M%S"), None
 
         except ValueError:
             return None, f"Date format is not YYYY:MM:DD HH:MM:SS in {file_path} - {datetime_original}"
