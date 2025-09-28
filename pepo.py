@@ -4,6 +4,10 @@ import argparse
 import logging
 from datetime import datetime
 
+SUPPORTED_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.tiff', '.mp4', '.mov')
+DEFAULT_MIN_YEAR = 2004
+DEFAULT_MIN_MONTH = 1
+
 logging.basicConfig(
     level=logging.WARNING,
     format="%(levelname)s - %(message)s"
@@ -51,18 +55,20 @@ def main():
     parser = argparse.ArgumentParser(
         description="Loops through a folder recursively and checks the DateTimeOriginal metadata of the images.")
     parser.add_argument('directory', type=str, help="Directory")
+    parser.add_argument('--min-year', type=int, default=DEFAULT_MIN_YEAR,
+                       help=f"Minimum allowed year (default: {DEFAULT_MIN_YEAR})")
+    parser.add_argument('--min-month', type=int, default=DEFAULT_MIN_MONTH,
+                       help=f"Minimum allowed month for min-year (default: {DEFAULT_MIN_MONTH})")
     args = parser.parse_args()
 
     current_year = datetime.now().year
     current_month = datetime.now().month
-    min_year = 2004
-    min_month = 1
 
     for root, dirs, files in os.walk(args.directory):
         for file in files:
-            if file.lower().endswith(('.jpg', '.jpeg', '.png', '.tiff', '.mp4', '.mov')):
+            if file.lower().endswith(SUPPORTED_EXTENSIONS):
                 file_path = os.path.join(root, file)
-                output, error = check_datetimeoriginal(file_path, current_year, current_month, min_year, min_month)
+                output, error = check_datetimeoriginal(file_path, current_year, current_month, args.min_year, args.min_month)
                 if not output:
                     logging.warning(error)
 
