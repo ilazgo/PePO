@@ -1,4 +1,3 @@
-import datetime
 import os
 import subprocess
 import argparse
@@ -33,17 +32,16 @@ def check_datetimeoriginal(file_path, max_year, max_month, min_year, min_month):
 
             if not datetime_original:
                 return None, f"ERROR: {file_path} has no DateTimeOriginal."
-            
-            if datetime_original:
-                # Date format: "YYYY:MM:DD HH:MM:SS"
-                dt = datetime.strptime(datetime_original, "%Y:%m:%d %H:%M:%S")
 
-                if (dt.year > max_year) or (dt.year == max_year and dt.month > max_month):
-                    return None, f"{file_path} has a date after {max_year}/{max_month}: {datetime_original}"
-                elif (dt.year < min_year) or (dt.year == min_year and dt.month < min_month):
-                    return None, f"{file_path} has a date before {min_year}/{min_month}: {datetime_original}"
+            # Date format: "YYYY:MM:DD HH:MM:SS"
+            dt = datetime.strptime(datetime_original, "%Y:%m:%d %H:%M:%S")
 
-                return dt.strftime("%Y%m%d_%H%M%S"), None
+            if (dt.year > max_year) or (dt.year == max_year and dt.month > max_month):
+                return None, f"{file_path} has a date after {max_year}/{max_month}: {datetime_original}"
+            elif (dt.year < min_year) or (dt.year == min_year and dt.month < min_month):
+                return None, f"{file_path} has a date before {min_year}/{min_month}: {datetime_original}"
+
+            return dt.strftime("%Y%m%d_%H%M%S"), None
 
         except ValueError:
             return None, f"Date format is not YYYY:MM:DD HH:MM:SS in {file_path} - {datetime_original}"
