@@ -2,6 +2,7 @@ import os
 import subprocess
 import argparse
 import logging
+import shutil
 from datetime import datetime
 
 SUPPORTED_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.tiff', '.mp4', '.mov')
@@ -51,10 +52,27 @@ def check_datetimeoriginal(file_path, max_year, max_month, min_year, min_month):
             return None, f"Date format is not YYYY:MM:DD HH:MM:SS in {file_path} - {datetime_original}"
 
 
+def move_file_to_output(file_path, datetime_str, output_directory):
+    dt = datetime.strptime(datetime_str, "%Y%m%d_%H%M%S")
+    year = dt.strftime("%Y")
+    month = dt.strftime("%m")
+    
+    year_month_dir = os.path.join(output_directory, year, month)
+    os.makedirs(year_month_dir, exist_ok=True)
+
+    _, extension = os.path.splitext(file_path)
+    new_filename = f"{datetime_str}{extension}"
+    new_file_path = os.path.join(year_month_dir, new_filename)
+
+    shutil.copy(file_path, new_file_path)
+    return new_file_path
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Loops through a folder recursively and checks the DateTimeOriginal metadata of the images.")
     parser.add_argument('directory', type=str, help="Directory")
+    parser.add_argument('output_directory', type=str, help="Output directory for files without errors")
     parser.add_argument('--min-year', type=int, default=DEFAULT_MIN_YEAR,
                        help=f"Minimum allowed year (default: {DEFAULT_MIN_YEAR})")
     parser.add_argument('--min-month', type=int, default=DEFAULT_MIN_MONTH,
@@ -69,7 +87,12 @@ def main():
             if file.lower().endswith(SUPPORTED_EXTENSIONS):
                 file_path = os.path.join(root, file)
                 output, error = check_datetimeoriginal(file_path, current_year, current_month, args.min_year, args.min_month)
-                if not output:
+                if output:
+                    try:
+                        new_file_path = move_file_to_output(file_path, output, args.output_directory)
+                    except Exception as e:
+                        logging.error(f"Failed to move {file_path}: {e}")
+                else:
                     logging.warning(error)
 
 
