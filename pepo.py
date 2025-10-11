@@ -52,7 +52,7 @@ def check_datetimeoriginal(file_path, max_year, max_month, min_year, min_month):
             return None, f"Date format is not YYYY:MM:DD HH:MM:SS in {file_path} - {datetime_original}"
 
 
-def move_file_to_output(file_path, datetime_str, output_directory):
+def move_file_to_output(file_path, datetime_str, output_directory, folder_suffix=None):
     dt = datetime.strptime(datetime_str, "%Y%m%d_%H%M%S")
     year = dt.strftime("%Y")
     month = dt.strftime("%m")
@@ -61,7 +61,12 @@ def move_file_to_output(file_path, datetime_str, output_directory):
     os.makedirs(year_month_dir, exist_ok=True)
 
     _, extension = os.path.splitext(file_path)
-    new_filename = f"{datetime_str}{extension}"
+    
+    if folder_suffix:
+        new_filename = f"{datetime_str}_{folder_suffix}{extension}"
+    else:
+        new_filename = f"{datetime_str}{extension}"
+        
     new_file_path = os.path.join(year_month_dir, new_filename)
 
     shutil.copy(file_path, new_file_path)
@@ -86,10 +91,20 @@ def main():
         for file in files:
             if file.lower().endswith(SUPPORTED_EXTENSIONS):
                 file_path = os.path.join(root, file)
+                
+                folder_suffix = None
+                relative_path = os.path.relpath(root, args.directory)
+                
+                if relative_path != '.':
+                    first_level_folder = relative_path.split(os.sep)[0]
+                    
+                    if first_level_folder.startswith('_'):
+                        folder_suffix = first_level_folder[1:]
+                
                 output, error = check_datetimeoriginal(file_path, current_year, current_month, args.min_year, args.min_month)
                 if output:
                     try:
-                        new_file_path = move_file_to_output(file_path, output, args.output_directory)
+                        new_file_path = move_file_to_output(file_path, output, args.output_directory, folder_suffix)
                     except Exception as e:
                         logging.error(f"Failed to move {file_path}: {e}")
                 else:
